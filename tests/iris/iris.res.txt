@@ -1,0 +1,16 @@
+c RFxp: Random Forest explainer.
+c
+loading data ...
+c nof features: 4
+c nof classes: 3
+c nof samples: 149
+Build a random forest.
+----------------------
+Train accuracy: 100.00
+Test accuracy: 93.33
+----------------------
+min: 5 | max: 27
+c RF sz: 1446
+c max-depth: 6
+c nof DTs: 100
+saving  model to  Classifiers/iris/iris_nbestim_100_maxdepth_6.mod.pkl
