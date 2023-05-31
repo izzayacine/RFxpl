@@ -11,11 +11,11 @@ Random Forests eXplainer with SAT
 
 * Train an RF model:
 
-<code>$> ./RFxp.py -d 4 -n 100  -t ./datasets/iris/iris.csv </code>
+<code>$> ./RFxp.py -d 4 -n 100  -t  ./tests/iris/iris.csv </code>
 
 * Compute an explanation:
 
-<code>$> ./RFxp.py -X abd -x '5.4,3.0,4.5,1.5' ./Classifiers/iris/iris_nbestim_100_maxdepth_4.mod.pkl </code>
+<code>$> ./RFxp.py -X abd -x '5.4,3.0,4.5,1.5' ./tests/iris/iris_nbestim_100_maxdepth_6.mod.pkl </code>
 
 
 ## Citations
@@ -35,10 +35,7 @@ Please cite the following paper when you use this work:
   publisher    = {ijcai.org},
   year         = {2021},
   url          = {https://doi.org/10.24963/ijcai.2021/356},
-  doi          = {10.24963/ijcai.2021/356},
-  timestamp    = {Wed, 25 Aug 2021 17:11:16 +0200},
-  biburl       = {https://dblp.org/rec/conf/ijcai/Izza021.bib},
-  bibsource    = {dblp computer science bibliography, https://dblp.org}
+  doi          = {10.24963/ijcai.2021/356}
 }
 
 ```
