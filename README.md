@@ -18,6 +18,12 @@ Random Forests eXplainer with SAT
 <code>$> ./RFxp.py -X abd -x '5.4,3.0,4.5,1.5' ./tests/iris/iris_nbestim_100_maxdepth_6.mod.pkl </code>
 
 
+* Increase verbosity: 
+Print the explanation feature-values by increasing the verbosity.
+
+<code>$> ./RFxp.py -v -X abd -x '5.4,3.0,4.5,1.5' ./tests/iris/iris_nbestim_100_maxdepth_6.mod.pkl .tests/iris/iris.csv </code>
+
+
 ## Citations
 
 Please cite the following paper when you use this work:
