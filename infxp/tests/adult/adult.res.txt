@@ -1,0 +1,18 @@
+c RFxp: Random Forest explainer.
+c
+loading data ...
+Attempt: loading extra data from  temp/adult/adult.csv.pkl
+loaded
+c nof features: 12
+c nof classes: 2
+c nof samples: 6061
+Build a random forest.
+----------------------
+Train accuracy: 79.46
+Test accuracy: 76.67
+----------------------
+min: 143 | max: 291
+c RF sz: 21526
+c max-depth: 8
+c nof DTs: 100
+saving  model to  Classifiers/adult/adult_nbestim_100_maxdepth_8.mod.pkl
