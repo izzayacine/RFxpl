@@ -10,6 +10,7 @@ from pysat.card import CardEnc, EncType
 from pysat.examples.lbx import LBX
 from pysat.examples.mcsls import MCSls
 from pysat.examples.rc2 import RC2
+from pysat.pb import PBEnc
 
 from .mxreason import MXReasoner, ClassEnc
 
@@ -29,10 +30,12 @@ class SATExplainer(object):
         self.target_name = target_name
         self.preamble = preamble
         self.verbose = verb
-        self.slv = None    
+        self.slv = None
+        self.cnf = None
       
     def prepare_selectors(self, sample):
         # adapt the solver to deal with the current sample
+        self.cnf = self.enc.cnf.copy()
         #self.csel = []
         self.assums = []  # var selectors to be used as assumptions
         self.sel2fid = {}  # selectors to original feature ids
@@ -65,7 +68,7 @@ class SATExplainer(object):
                 else:
                     self.sel2v[selv] = p
                     
-                self.enc.cnf.append([-selv, p])
+                self.cnf.append([-selv, p])
                 #self.enc.printLits([-selv, p])
                     
             elif len(self.enc.intvs[inp]):        
@@ -87,7 +90,7 @@ class SATExplainer(object):
                     else:
                         cl += [-p]
                     
-                    self.enc.cnf.append(cl)
+                    self.cnf.append(cl)
                     #self.enc.printLits(cl)
 
         
@@ -111,11 +114,14 @@ class SATExplainer(object):
             expl = self.compute_axp(smallest) 
         else:
             # contrastive explanation
-            expl = self.compute_cxp()
+            expl = self.compute_cxp(smallest)
  
         self.time = resource.getrusage(resource.RUSAGE_CHILDREN).ru_utime + \
                 resource.getrusage(resource.RUSAGE_SELF).ru_utime - self.time
     
+        # clear cnf
+        del self.cnf
+        self.cnf = None
         # delete sat solver
         self.slv.delete()
         self.slv = None
@@ -137,7 +143,7 @@ class SATExplainer(object):
         self.slv = Solver(name="glucose3")
         
         # pass a CNF formula
-        self.slv.append_formula(self.enc.cnf)    
+        self.slv.append_formula(self.cnf)    
         
         if not smallest:
             #minimal()
@@ -255,7 +261,7 @@ class SATExplainer(object):
             compute (minimal) CXp
         """
         wcnf = WCNF()
-        for cl in self.enc.cnf:
+        for cl in self.cnf:
             wcnf.append(cl)    
         for p in self.assums:
             wcnf.append([p], weight=1)
@@ -273,7 +279,7 @@ class SATExplainer(object):
             compute minimum/smallest CXp
         """
         wcnf = WCNF()
-        for cl in self.enc.cnf:
+        for cl in self.cnf:
             wcnf.append(cl)    
         for p in self.assums:
             wcnf.append([p], weight=1)
@@ -353,10 +359,10 @@ class SATExplainer(object):
         
         if oracle is None:
             oracle = Solver(name="glucose3")
-            oracle.append_formula(self.enc.cnf)
+            oracle.append_formula(self.cnf)
             
             wcnf = WCNF()
-            for cl in self.enc.cnf:
+            for cl in self.cnf:
                 wcnf.append(cl)
             for h in self.assums:
                 wcnf.append([h], weight=1)                
@@ -447,7 +453,7 @@ class SATExplainer(object):
         
         if oracle is None:
             oracle = Solver(name="glucose3")
-            oracle.append_formula(self.enc.cnf)    
+            oracle.append_formula(self.cnf)    
             
         with Hitman(bootstrap_with=[[i for i in range(len(self.assums))]]) as hitman:
             # computing unit-size MCS/MUS
@@ -506,7 +512,7 @@ class SATExplainer(object):
         # compute CXp's/AE's    
         if oracle is None:    
             wcnf = WCNF()
-            for cl in self.enc.cnf:
+            for cl in self.cnf:
                 wcnf.append(cl)    
             for p in self.assums:
                 wcnf.append([p], weight=1)
@@ -576,7 +582,7 @@ class MXExplainer(SATExplainer):
                 encoding[label] = ClassEnc(formula=WCNF(), leaves=self.enc.leaves[label], trees=[])
             else:
                 formula = WCNF()
-                for cl in self.enc.cnf:
+                for cl in self.cnf:
                     formula.append(cl)
                 for cl in self.enc.soft[label].hard:
                     formula.append(cl)
@@ -631,7 +637,7 @@ class MXExplainer(SATExplainer):
         for clid in self.slv.oracles:
             self.slv.oracles[clid].oracle.set_phases(self.assums) 
         model = self.slv.get_coex([], early_stop=True)
-        assert (model)
+        assert (len(model))
         # self.assums = [-h for h in self.assums]
         self.assums = [p if model[abs(p)-1]>0 else -p for p in self.assums]
         # self.enc.printLits(self.assums) 
@@ -649,8 +655,57 @@ class MXExplainer(SATExplainer):
     
     
     def _mmcs(self):
-        #raise NotImplementedError('Computing smallest contrastive explanations is not yet implemented.')
-        return self._mcs()
+        # computed smallest CXp
+        cxps = []
+        for cid in range(self.enc.num_class):
+            if cid == self.enc.target:
+                continue
+            wcnf = WCNF()
+            #wcnf = WCNFPlus()
+            wcnf.extend(self.cnf.clauses)
+        
+            # weight and the current & target class
+            wght, lhs, cost = [], [], 0
+            for (lit, w1), (lit2, w2) in zip(self.enc.leaves[cid], self.enc.leaves[self.enc.target]):
+                assert (lit == lit2)
+                if (w1 - w2):
+                    w = (w1 - w2)*(10 ** 1)
+                    cost += 0 if w>0 else -w
+                    w, l = (w, lit) if w>0 else (-w, -lit)           
+                    wght.append(w)
+                    lhs.append(l)
+#                     wght.append(w1 - w2)
+#                     wght[-1] *= (10 ** 2)
+#                     lhs.append(lit)                    
+              
+#             wcnf.extend(self.enc.soft[cid].hard)
+#             lhs = [cl[0] for cl in self.enc.soft[cid].soft]
+#             wght = [w *(10 ** self.enc.relax) for w in self.enc.soft[cid].wght]
+#             #print(min(wght), max(wght), min(self.enc.soft[cid].wght), max(self.enc.soft[cid].wght))
+#             print("PB", len(lhs), len(self.enc.soft[cid].wght))
+#             cost = self.enc.soft[cid].cost*(10 ** self.enc.relax)
+#             cls = PBEnc.atleast(lits=lhs, weights=wght, bound=cost, vpool=self.enc.vpool)
+#             print(len(cls.clauses))
+            
+            cls = PBEnc.atleast(lits=lhs, weights=wght, bound=cost, vpool=self.enc.vpool) # EncType.native=6
+#             print(len(cls.atmosts[0][0]), (cls.atmosts[0][1]), len(cls.atmosts[0][2]))
+#             for atms in cls.atmosts: 
+#                 wcnf.append(atms, is_atmost=True)
+            wcnf.extend(cls.clauses)
+            
+            for h in self.assums:
+                wcnf.append([h], weight=1)
+            
+            with RC2(wcnf, solver='g3', adapt=False, exhaust=True, minz=False, trim=5) as self.slv:
+                model = self.slv.compute()
+                assert (model)
+                expl = [self.sel2fid[p] for p in self.assums if (model[abs(p) - 1] < 0)]
+                cxps.append(expl)
+            if len(expl) == 1:
+                break
+            #print(cxps)    
+            expl = min(cxps, key=lambda x: len(x))   
+        return expl
         
     
     def enumerate(self, sample, xtype='con', smallest=False, xnum=100):

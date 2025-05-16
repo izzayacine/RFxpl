@@ -65,7 +65,7 @@ class Explainer(SATExplainer):
         self.slv = Solver(name="glucose3")
         
         # pass a CNF formula
-        self.slv.append_formula(self.enc.cnf)    
+        self.slv.append_formula(self.cnf)    
         
         # compute an inflated axp
         infx = self._mus()
@@ -171,7 +171,7 @@ class Explainer(SATExplainer):
             compute (minimal) CXp
         """
         wcnf = WCNF()
-        for cl in self.enc.cnf:
+        for cl in self.cnf:
             wcnf.append(cl)    
         for p in self.assums:
             wcnf.append([p], weight=1)
@@ -186,7 +186,7 @@ class Explainer(SATExplainer):
         
         self.slv.delete() # rm LBX
         self.slv = Solver(name="glucose3") # create SAT slv
-        self.slv.append_formula(self.enc.cnf)          
+        self.slv.append_formula(self.cnf)          
         
         for i,h in enumerate(xhypos):
             
